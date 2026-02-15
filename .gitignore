@@ -1,0 +1,30 @@
+# Virtual Environment - DON'T UPLOAD THIS!
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.Python
+
+# Data files (too large for Git)
+*.npz
+*.pkl
+*.h5
+*.hdf5
+02_data/training_data.npz
+
+# Results
+05_results/
+test_epidemic.png
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
