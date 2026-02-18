@@ -44,6 +44,33 @@ git config user.email "your.email@example.com"
 
 ---
 
+## ▶️ STEP 4: Run SIR Data Generation
+
+Use these commands to generate synthetic SIR data with `02_data/generate_data.py`.
+
+```bash
+cd epidemic-sbi-project
+python3 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+pip install "numpy>=1.26,<2.0" "scipy>=1.11,<1.13" "matplotlib>=3.8,<3.9" "tqdm>=4.66,<5"
+python 02_data/generate_data.py --n-samples 10000 --out 02_data/sir_dataset.npz
+```
+
+Expected output file:
+
+```text
+02_data/sir_dataset.npz
+```
+
+Quick check:
+
+```bash
+ls -lh 02_data/sir_dataset.npz
+```
+
+---
+
 ## 📋 Assignments & Extension Goals
 
 The core goal is to move beyond basic NPE and perform a **Method Comparison**.
