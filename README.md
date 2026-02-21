@@ -9,9 +9,9 @@ Before starting, ensure your local folder looks like this. Pratik has already in
 ```text
 epidemic-sbi-project/
 ├── 01_simulator/
-│   └── sir_model.py       <-- DONE (Pratik)
+│   └── sir_model.py       <-- DONE: Pratik
 ├── 02_data/
-│   └── generate_data.py   <-- Assignment: Teammate 2
+│   └── generate_data.py   <-- DONE: Suryansh
 ├── 03_training/
 │   └── train_models.py    <-- Assignment: Shared (NPE vs NRE)
 ├── 04_evaluation/
