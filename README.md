@@ -13,7 +13,7 @@ epidemic-sbi-project/
 ├── 02_data/
 │   └── generate_data.py   <-- DONE: Suryansh
 ├── 03_training/
-│   └── train_models.py    <-- Assignment: Shared (NPE vs NRE)
+│   └── train_models.py    <-- NLE - Suryansh
 ├── 04_evaluation/
 │   └── metrics.py         <-- Assignment: Teammate 3
 ├── requirements.txt
@@ -67,6 +67,40 @@ Quick check:
 
 ```bash
 ls -lh 02_data/sir_dataset.npz
+```
+
+---
+
+## 🧠 STEP 5: Run NLE Training
+
+Train the Neural Likelihood Estimation (NLE) model using the generated dataset.
+
+```bash
+cd epidemic-sbi-project
+source venv/bin/activate
+python 03_methods/train_nle.py --data 02_data/sir_dataset.npz --normalize-x
+```
+
+Optional overrides:
+
+```bash
+python 03_methods/train_nle.py \
+  --data 02_data/sir_dataset.npz \
+  --artifacts-dir 03_methods/artifacts \
+  --epochs 150 \
+  --batch-size 256 \
+  --lr 1e-3 \
+  --hidden-dim 256 \
+  --device auto \
+  --normalize-x
+```
+
+Expected outputs:
+
+```text
+03_methods/artifacts/nle_model.pt
+03_methods/artifacts/nle_metrics.json
+03_methods/artifacts/nle_normalization.npz
 ```
 
 ---
