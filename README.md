@@ -13,7 +13,7 @@ epidemic-sbi-project/
 ├── 02_data/
 │   └── generate_data.py   <-- DONE: Suryansh
 ├── 03_training/
-│   └── train_models.py    <-- NLE - Suryansh
+│   └── train_models.py    <-- NLE: Suryansh
 ├── 04_evaluation/
 │   └── metrics.py         <-- Assignment: Teammate 3
 ├── requirements.txt
