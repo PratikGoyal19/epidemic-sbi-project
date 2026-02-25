@@ -105,6 +105,39 @@ Expected outputs:
 
 ---
 
+## 🧠 STEP 6: Run NPE Training (Colab GPU)
+
+Train the Neural Posterior Estimation (NPE) model using the generated dataset. For significantly faster training times, this step is optimized for execution on a Google Colab T4 GPU.
+
+In a new Colab notebook, copy and paste this single cell to mount your drive and execute the training pipeline:
+
+```python
+# 1. Mount Google Drive to access your uploaded repository
+from google.colab import drive
+drive.mount('/content/drive')
+
+# 2. Execute the training script
+!python /content/drive/MyDrive/epidemic-sbi-project/03_methods/train_npe.py \
+  --data /content/drive/MyDrive/epidemic-sbi-project/02_data/sir_dataset.npz
+
+Optional overrides (for hyperparameter tuning):
+
+!python /content/drive/MyDrive/epidemic-sbi-project/03_methods/train_npe.py \
+  --data /content/drive/MyDrive/epidemic-sbi-project/02_data/sir_dataset.npz \
+  --artifacts-dir /content/drive/MyDrive/epidemic-sbi-project/03_methods/artifacts \
+  --epochs 150 \
+  --batch-size 256 \
+  --lr 5e-4 \
+  --hidden-dim 50 \
+  --density-estimator maf
+
+Expected outputs:
+
+03_methods/artifacts/npe_posterior.pkl
+03_methods/artifacts/npe_metrics.json
+
+---
+
 ## 📋 Assignments & Extension Goals
 
 The core goal is to move beyond basic NPE and perform a **Method Comparison**.
@@ -124,3 +157,4 @@ The core goal is to move beyond basic NPE and perform a **Method Comparison**.
 3. **DAILY PUSH:** Don't wait until the deadline. Commit daily.
 4. **CONSULT:** Ask in the group chat before changing `sir_model.py` or `requirements.txt`.
 
+---
