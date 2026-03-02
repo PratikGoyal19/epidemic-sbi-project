@@ -81,6 +81,36 @@ def generate_dataset(
     return theta.astype(np.float32), x
 
 
+def print_statistics(theta: np.ndarray, x: np.ndarray, N: int) -> None:
+    """Print comprehensive dataset statistics."""
+    print("\n" + "="*70)
+    print(" DATASET STATISTICS")
+    print("="*70)
+    
+    # Parameter statistics
+    print(f"\n Parameters:")
+    print(f"  Beta:  min={theta[:, 0].min():.4f}, max={theta[:, 0].max():.4f}, mean={theta[:, 0].mean():.4f}")
+    print(f"  Gamma: min={theta[:, 1].min():.4f}, max={theta[:, 1].max():.4f}, mean={theta[:, 1].mean():.4f}")
+    
+    # R0 statistics
+    R0 = theta[:, 0] / theta[:, 1]
+    print(f"  R₀:    min={R0.min():.2f}, max={R0.max():.2f}, mean={R0.mean():.2f}")
+    
+    # Observation statistics
+    print(f"\n Observations:")
+    peak_infected = x.max(axis=1)
+    print(f"  Peak infected: min={peak_infected.min():.0f}, max={peak_infected.max():.0f}, mean={peak_infected.mean():.0f}")
+    print(f"  (As % of population: min={peak_infected.min()/N*100:.1f}%, max={peak_infected.max()/N*100:.1f}%, mean={peak_infected.mean()/N*100:.1f}%)")
+    
+    # Data quality checks
+    print(f"\n Quality Checks:")
+    print(f"  NaN values:      {' FOUND!' if np.any(np.isnan(x)) else ' None'}")
+    print(f"  Negative values: {' FOUND!' if np.any(x < 0) else ' None'}")
+    print(f"  Zero epidemics:  {np.sum(peak_infected == 0)} / {len(x)}")
+    
+    print("="*70 + "\n")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate SIR SBI dataset")
     parser.add_argument("--n-samples", type=int, default=10_000)
@@ -112,6 +142,21 @@ def main() -> None:
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Print configuration
+    print("="*70)
+    print(" GENERATING SIR TRAINING DATASET")
+    print("="*70)
+    print(f"Samples: {args.n_samples:,}")
+    print(f"Time steps: {args.T}")
+    print(f"Population: {args.population:,}")
+    print(f"Beta range: [{args.beta_min}, {args.beta_max}]")
+    print(f"Gamma range: [{args.gamma_min}, {args.gamma_max}]")
+    print(f"R₀ range: [{args.beta_min/args.gamma_max:.1f}, {args.beta_max/args.gamma_min:.1f}]")
+    print(f"Output: {out_path}")
+    print("="*70)
+    print("\n  This will take 15-30 minutes...\n")
+
+    # Generate dataset
     theta, x = generate_dataset(
         n_samples=args.n_samples,
         T=args.T,
@@ -126,6 +171,10 @@ def main() -> None:
         seed=args.seed,
     )
 
+    # Print statistics
+    print_statistics(theta, x, args.population)
+
+    # Save dataset
     np.savez_compressed(
         out_path,
         theta=theta,
@@ -137,9 +186,17 @@ def main() -> None:
         R0=np.int32(args.r0),
     )
 
-    print(f"Saved dataset to: {out_path}")
-    print(f"theta shape: {theta.shape}")
-    print(f"x shape: {x.shape}")
+    file_size = out_path.stat().st_size / (1024**2)
+    
+    print("\n" + "="*70)
+    print(" DATASET GENERATION COMPLETE!")
+    print("="*70)
+    print(f" Saved to: {out_path}")
+    print(f" theta shape: {theta.shape}")
+    print(f" x shape: {x.shape}")
+    print(f" File size: {file_size:.2f} MB")
+    print("\n Next: Commit and push to GitHub!")
+    print("="*70 + "\n")
 
 
 if __name__ == "__main__":
