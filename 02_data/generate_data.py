@@ -118,10 +118,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--population", type=int, default=10_000)
     parser.add_argument("--i0", type=int, default=10)
     parser.add_argument("--r0", type=int, default=0)
+    
+    #  CORRECTED: Match simulator's tested range
     parser.add_argument("--beta-min", type=float, default=0.10)
-    parser.add_argument("--beta-max", type=float, default=1.00)
+    parser.add_argument("--beta-max", type=float, default=0.60)  # ← CORRECTED from 1.00
     parser.add_argument("--gamma-min", type=float, default=0.01)
     parser.add_argument("--gamma-max", type=float, default=0.10)
+    
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--normalize-by-population",
