@@ -114,7 +114,7 @@ def main() -> None:
     inference_net = bf.networks.InvertibleNetwork(
         num_params=2,  # beta and gamma
         num_coupling_layers=args.num_coupling_layers,
-        coupling_net_settings={
+        coupling_settings={
             "dense_args": {"units": args.hidden_dim, "activation": "relu"}
         }
     )
@@ -180,3 +180,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
