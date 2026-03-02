@@ -1,31 +1,60 @@
+"""Setup the compatible Python 3.10 Environment"""
 
-import os
+# Force install Python 3.10 and compatible TensorFlow/Bayesflow
+!sudo apt-get update -y
+!sudo apt-get install python3.10 python3.10-distutils -y
+!curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+!python3.10 -m pip install tensorflow==2.15.0 bayesflow==1.1.6
+
+"""Mount Drive & Run the Script"""
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Run using the Python 3.10 environment we just built
+!python3.10 /content/drive/MyDrive/epidemic-sbi-project/03_methods/train_npe.py \
+  --data /content/drive/MyDrive/epidemic-sbi-project/02_data/sir_dataset.npz \
+  --artifacts-dir /content/drive/MyDrive/epidemic-sbi-project/03_methods/artifacts
+
+"""Zip and Download Artifacts"""
+
 from google.colab import files
 
-# Create the expected folder structure
-os.makedirs('02_data', exist_ok=True)
-os.makedirs('03_methods/artifacts', exist_ok=True)
+# Zip the artifacts directory
+!zip -r /content/npe_artifacts.zip /content/drive/MyDrive/epidemic-sbi-project/03_methods/artifacts/
 
-print("Upload sir_dataset.npz:")
-uploaded_data = files.upload()
-for fn in uploaded_data.keys():
-    os.rename(fn, f'02_data/{fn}')
+# Download the zip directly to your computer
+files.download('/content/npe_artifacts.zip')
 
-print("Upload train_npe.py (or create it in the file explorer):")
-uploaded_script = files.upload()
+    
+
+"""
+Train a Neural Posterior Estimation (NPE) model for SIR data using BayesFlow.
+
+Model:
+- Learns p(theta | x), where:
+  - theta = [beta, gamma] (shape: 2)
+  - x = infected trajectory over time (shape: T)
+- Uses an Amortized Posterior backed by an Invertible Network (Normalizing Flow).
+
+Outputs:
+- 03_methods/artifacts/npe_weights (TensorFlow Checkpoint files)
+- 03_methods/artifacts/npe_metrics.json
+"""
 
 import argparse
 import json
-import pickle
 import time
 from pathlib import Path
 
 import numpy as np
-import torch
-from sbi.inference import SNPE
-from sbi.utils import BoxUniform
+import tensorflow as tf
+import bayesflow as bf
+
+
 
 def load_dataset(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Loads and validates the SIR dataset."""
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found: {path}")
     data = np.load(path)
@@ -42,7 +71,7 @@ def load_dataset(path: Path) -> tuple[np.ndarray, np.ndarray]:
     return theta.astype(np.float32), x.astype(np.float32)
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train NPE on SIR dataset using sbi")
+    parser = argparse.ArgumentParser(description="Train NPE on SIR dataset using BayesFlow")
     parser.add_argument(
         "--data",
         type=str,
@@ -61,95 +90,87 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--hidden-dim", type=int, default=50)
     parser.add_argument(
-        "--density-estimator", 
-        type=str, 
-        default="maf", 
-        choices=["maf", "nsf", "mdn"],
-        help="Type of density estimator for the posterior."
+        "--num-coupling-layers", 
+        type=int, 
+        default=4,
+        help="Number of coupling layers for the Invertible Network."
     )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="cuda" if torch.cuda.is_available() else "cpu",
-        help="Training device.",
-    )
-  # parse_known_args() parses your arguments and ignores the extra Colab '-f' flag
-    args, unknown = parser.parse_known_args()
+    # parse_known_args() ignores hidden Jupyter flags like '-f' if run in a notebook
+    args, _ = parser.parse_known_args()
     return args
-
 
 def main() -> None:
     args = parse_args()
-    torch.manual_seed(args.seed)
+    
+    # Set seeds for reproducibility
+    tf.random.set_seed(args.seed)
     np.random.seed(args.seed)
 
     data_path = Path(args.data)
     out_dir = Path(args.artifacts_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Load data
+    print("Loading dataset...")
     theta, x = load_dataset(data_path)
-    theta_tensor = torch.from_numpy(theta)
-    x_tensor = torch.from_numpy(x)
-
-    # 2. Define Prior dynamically based on dataset bounds
-    # (Extracting min/max slightly expanded to prevent edge-case clipping)
-    theta_min = theta_tensor.min(dim=0)[0] - 1e-4
-    theta_max = theta_tensor.max(dim=0)[0] + 1e-4
-    prior = BoxUniform(low=theta_min, high=theta_max, device=args.device)
-
-    # 3. Setup and Train NPE via sbi
-    print(f"Initializing SNPE with {args.density_estimator.upper()} estimator...")
-    inference = SNPE(
-        prior=prior, 
-        density_estimator=args.density_estimator, 
-        device=args.device
-    )
     
-    inference = inference.append_simulations(theta_tensor, x_tensor)
+    # Format data specifically for BayesFlow offline training
+    sim_data = {
+        "prior_draws": theta,
+        "sim_data": x
+    }
 
+    print(f"Initializing BayesFlow NPE with {args.num_coupling_layers} coupling layers...")
+    # 1. Define the Inference Network (Normalizing Flow)
+    inference_net = bf.networks.InvertibleNetwork(
+        num_params=2, # beta and gamma
+        num_coupling_layers=args.num_coupling_layers,
+        coupling_net_settings={
+            "dense_args": {"units": args.hidden_dim, "activation": "relu"}
+        }
+    )
+
+    # 2. Set up the Amortized Posterior
+    amortizer = bf.amortizers.AmortizedPosterior(inference_net)
+
+    # 3. Configure the Trainer
+    trainer = bf.trainers.Trainer(
+        amortizer=amortizer,
+        default_lr=args.lr
+    )
+
+    print("Starting offline training...")
     start = time.time()
-    density_estimator = inference.train(
-        training_batch_size=args.batch_size,
-        learning_rate=args.lr,
-        max_num_epochs=args.epochs,
-        show_train_summary=True
+    # 4. Execute Offline Training
+    history = trainer.train_offline(
+        simulations_dict=sim_data,
+        epochs=args.epochs,
+        batch_size=args.batch_size
     )
     runtime_sec = time.time() - start
 
-    # 4. Build and Save Posterior
-    posterior = inference.build_posterior(density_estimator)
-    
-    # Crucial: Map to CPU before pickling to allow cross-architecture local loading
-    posterior.set_default_device("cpu")
-    
-    posterior_path = out_dir / "npe_posterior.pkl"
-    with open(posterior_path, "wb") as f:
-        pickle.dump(posterior, f)
+    # 5. Save Weights (Without .h5 extension to force standard TF Checkpoint format)
+    weights_prefix = out_dir / "npe_weights"
+    trainer.amortizer.save_weights(str(weights_prefix))
 
-    # 5. Save Metrics
+    # 6. Save Metrics
     metrics = {
         "dataset_path": str(data_path),
         "n_samples": int(theta.shape[0]),
         "trajectory_length_T": int(x.shape[1]),
-        "device": str(args.device),
         "seed": args.seed,
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "learning_rate": args.lr,
-        "density_estimator": args.density_estimator,
-        "prior_bounds": {
-            "low": theta_min.tolist(),
-            "high": theta_max.tolist()
-        },
-        "runtime_sec": float(runtime_sec),
+        "num_coupling_layers": args.num_coupling_layers,
+        "hidden_dim": args.hidden_dim,
+        "runtime_sec": float(runtime_sec)
     }
     
     metrics_path = out_dir / "npe_metrics.json"
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"\nSaved CPU-mapped posterior to: {posterior_path}")
+    print(f"\nSaved BayesFlow weights to: {out_dir} (as TF Checkpoints)")
     print(f"Saved metrics to: {metrics_path}")
     print(f"Runtime: {runtime_sec:.2f}s")
 
