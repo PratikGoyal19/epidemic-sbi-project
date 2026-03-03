@@ -89,16 +89,16 @@ python 03_methods/train_nle.py \
   --artifacts-dir 03_methods/artifacts \
   --epochs 150 \
   --batch-size 256 \
-  --lr 1e-3 \
-  --hidden-dim 256 \
-  --device auto \
+  --lr 5e-4 \
+  --hidden-dim 128 \
+  --num-coupling-layers 4 \
   --normalize-x
 ```
 
 Expected outputs:
 
 ```text
-03_methods/artifacts/nle_model.pt
+03_methods/artifacts/nle_checkpoint/
 03_methods/artifacts/nle_metrics.json
 03_methods/artifacts/nle_normalization.npz
 ```
