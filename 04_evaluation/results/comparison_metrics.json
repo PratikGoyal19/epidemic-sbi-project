@@ -1,0 +1,50 @@
+{
+  "n_test": 50,
+  "n_posterior_samples": 200,
+  "NPE": {
+    "mae": {
+      "mae_beta": 0.0055161286145448685,
+      "mae_gamma": 0.001107212738133967,
+      "mae_mean": 0.0033116706763394177
+    },
+    "coverage": {
+      "coverage_50": {
+        "beta": 0.62,
+        "gamma": 0.54,
+        "mean": 0.58
+      },
+      "coverage_90": {
+        "beta": 0.98,
+        "gamma": 0.94,
+        "mean": 0.96
+      }
+    },
+    "rmse": {
+      "rmse_beta": 0.007256268989294767,
+      "rmse_gamma": 0.0016687766183167696
+    }
+  },
+  "NLE": {
+    "mae": {
+      "mae_beta": 0.049287959933280945,
+      "mae_gamma": 0.023491129279136658,
+      "mae_mean": 0.0363895446062088
+    },
+    "coverage": {
+      "coverage_50": {
+        "beta": 0.62,
+        "gamma": 0.48,
+        "mean": 0.55
+      },
+      "coverage_90": {
+        "beta": 0.96,
+        "gamma": 0.86,
+        "mean": 0.91
+      }
+    },
+    "rmse": {
+      "rmse_beta": 0.0600220151245594,
+      "rmse_gamma": 0.026998354122042656
+    }
+  }
+}
