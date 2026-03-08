@@ -25,7 +25,21 @@ epidemic-sbi-project/
 │       ├── nle_metrics.json
 │       └── nle_normalization.npz
 ├── 04_evaluation/
-│   └── metrics.py
+│   ├── metrics.py
+│   ├── real_data.py
+│   └── results/
+│       ├── comparison_metrics.json
+│       ├── npe_posterior_recovery.png
+│       ├── nle_posterior_recovery.png
+│       ├── npe_vs_nle_comparison.png
+│       ├── npe_sbc.png
+│       ├── nle_sbc.png
+│       ├── metrics_summary.png
+│       └── real_data/
+│           ├── italy_inference_results.json
+│           ├── real_data_posteriors.png
+│           ├── real_data_predictive.png
+│           └── real_data_npe_vs_nle.png
 ├── requirements.txt
 └── README.md
 ```
@@ -41,6 +55,7 @@ epidemic-sbi-project/
 | NPE Training | Pratik Goyal | ✅ Done |
 | NLE Training | Pratik Goyal | ✅ Done |
 | Evaluation (NPE vs NLE) | Mayank Choudhary | ✅ Done |
+| Real Data Inference (Italy COVID-19) | Pratik Goyal | ✅ Done |
 
 ---
 
@@ -145,11 +160,38 @@ python 03_methods/train_nle.py \
 python 04_evaluation/metrics.py
 ```
 
-This script compares NPE and NLE using:
+This script compares NPE and NLE on 50 held-out test samples using:
 - **MAE** (Mean Absolute Error) on β and γ
-- **Coverage** of 90% credible intervals
+- **RMSE** on β and γ
+- **Coverage** of 50% and 90% credible intervals
 - **Posterior recovery plots**
 - **SBC** (Simulation-Based Calibration)
+
+**Key results:**
+```
+NPE MAE:  0.0033   vs   NLE MAE:  0.0364   (NPE is 11x more accurate)
+NPE 90% Coverage: 96-98%   vs   NLE: 86-96%
+```
+
+**Outputs saved to** `04_evaluation/results/`
+
+---
+
+## 🦠 Step 5: Real Data Inference (Italy COVID-19 First Wave)
+
+```bash
+python 04_evaluation/real_data.py
+```
+
+Applies both trained models to Italy's COVID-19 first wave (Feb 23 – Jul 31, 2020) using the Our World in Data dataset.
+
+**Key results:**
+```
+NPE: β=0.544, γ=0.103, R₀=5.28  [90% CI: 4.96, 5.60]  — tight, confident estimate
+NLE: β=0.114, γ=0.048, R₀=3.48  [90% CI: 1.16, 8.61]  — wide, uncertain estimate
+```
+
+**Outputs saved to** `04_evaluation/results/real_data/`
 
 ---
 
