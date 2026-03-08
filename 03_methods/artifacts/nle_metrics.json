@@ -1,0 +1,23 @@
+{
+  "dataset_path": "02_data\\sir_dataset.npz",
+  "n_samples": 10000,
+  "trajectory_length_T": 160,
+  "seed": 42,
+  "epochs": 150,
+  "batch_size": 256,
+  "learning_rate": 0.0005,
+  "weight_decay": 1e-05,
+  "num_coupling_layers": 4,
+  "hidden_dim": 128,
+  "val_fraction": 0.1,
+  "normalize_x": false,
+  "checkpoint_path": "03_methods\\artifacts\\nle_checkpoint",
+  "best_epoch": -1,
+  "best_val_loss": NaN,
+  "final_train_loss": NaN,
+  "final_val_loss": NaN,
+  "train_metric_key": null,
+  "val_metric_key": null,
+  "runtime_sec": 238.97877144813538,
+  "history": {}
+}
