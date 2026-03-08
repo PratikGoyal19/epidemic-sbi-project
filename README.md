@@ -1,92 +1,127 @@
-# epidemic-sbi-project
+# Epidemic SBI Project
 
-This repository implements a **Simulation-Based Inference (SBI)** framework to estimate parameters () for the SIR epidemic model. This project extends **Homework 4** by comparing **Neural Posterior Estimation (NPE)** against other amortized methods (e.g., NRE or NPSE) using **BayesFlow**.
+This repository implements a Simulation-Based Inference (SBI) framework to estimate parameters (β, γ) for the SIR epidemic model. This project extends Homework 4 by comparing Neural Posterior Estimation (NPE) against Neural Likelihood Estimation (NLE) using BayesFlow.
 
-## 📂 STEP 1: Repository Structure
+---
 
-Before starting, ensure your local folder looks like this. Pratik has already initialized the repository and pushed the simulator.
+## 📂 Repository Structure
 
-```text
+```
 epidemic-sbi-project/
 ├── 01_simulator/
-│   └── sir_model.py       <-- DONE: Pratik
+│   └── sir_model.py
 ├── 02_data/
-│   └── generate_data.py   <-- DONE: Suryansh
-├── 03_training/
-│   └── train_models.py    <-- NLE: Suryansh
+│   ├── generate_data.py
+│   ├── test_generation.py
+│   └── sir_dataset.npz
+├── 03_methods/
+│   ├── train_npe.py
+│   ├── train_nle.py
+│   ├── test_npe.py
+│   └── artifacts/
+│       ├── npe_checkpoint/
+│       ├── nle_checkpoint/
+│       ├── npe_metrics.json
+│       ├── nle_metrics.json
+│       └── nle_normalization.npz
 ├── 04_evaluation/
-│   └── metrics.py         <-- Assignment: Teammate 3
+│   └── metrics.py
 ├── requirements.txt
 └── README.md
-
 ```
 
 ---
 
-## 🚀 STEP 2: Setup Python Environment
+## 👥 Team
+
+| Phase | Assigned To | Status |
+|-------|-------------|--------|
+| Simulator | Pratik Goyal | ✅ Done |
+| Data Generation | Suryansh Chaturvedi | ✅ Done |
+| NPE Training | Pratik Goyal | ✅ Done |
+| NLE Training | Pratik Goyal | ✅ Done |
+| Evaluation (NPE vs NLE) | Mayank Choudhary | ✅ Done |
+
+---
+
+## 🚀 Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/PratikGoyal19/epidemic-sbi-project.git
+cd epidemic-sbi-project
+
+# Create and activate virtual environment
 python -m venv venv
-# Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate
-python -m pip install --upgrade pip
+
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 pip install bayesflow==1.1.6
-
-```
-
-## 🛠 STEP 3: Configure Git
-
-```bash
-git config user.name "Your Name"
-git config user.email "your.email@example.com"
-
 ```
 
 ---
 
-## ▶️ STEP 4: Run SIR Data Generation
-
-Use these commands to generate synthetic SIR data with `02_data/generate_data.py`.
+## ▶️ Step 1: Generate Dataset
 
 ```bash
-cd epidemic-sbi-project
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-pip install "numpy>=1.26,<2.0" "scipy>=1.11,<1.13" "matplotlib>=3.8,<3.9" "tqdm>=4.66,<5"
 python 02_data/generate_data.py --n-samples 10000 --out 02_data/sir_dataset.npz
 ```
 
-Expected output file:
-
-```text
-02_data/sir_dataset.npz
+**Expected output:**
+```
+02_data/sir_dataset.npz   (~3 MB)
+theta shape: (10000, 2)   [beta, gamma]
+x shape:     (10000, 160) [infected counts over 160 days]
 ```
 
-Quick check:
-
+**Quick test first (100 samples, ~5 seconds):**
 ```bash
-ls -lh 02_data/sir_dataset.npz
+python 02_data/test_generation.py
 ```
 
 ---
 
-## 🧠 STEP 5: Run NLE Training
-
-Train the Neural Likelihood Estimation (NLE) model using the generated dataset.
+## 🧠 Step 2: Train NPE (Neural Posterior Estimation)
 
 ```bash
-cd epidemic-sbi-project
-source venv/bin/activate
-python 03_methods/train_nle.py --data 02_data/sir_dataset.npz --normalize-x
+python 03_methods/train_npe.py
 ```
 
-Optional overrides:
+**Optional overrides:**
+```bash
+python 03_methods/train_npe.py \
+  --data 02_data/sir_dataset.npz \
+  --epochs 50 \
+  --batch-size 256 \
+  --hidden-dim 128 \
+  --num-coupling-layers 4 \
+  --summary-dim 32
+```
 
+**Expected outputs:**
+```
+03_methods/artifacts/npe_checkpoint/
+03_methods/artifacts/npe_metrics.json
+```
+
+---
+
+## 🧠 Step 3: Train NLE (Neural Likelihood Estimation)
+
+```bash
+python 03_methods/train_nle.py
+```
+
+**Optional overrides:**
 ```bash
 python 03_methods/train_nle.py \
   --data 02_data/sir_dataset.npz \
-  --artifacts-dir 03_methods/artifacts \
   --epochs 150 \
   --batch-size 256 \
   --lr 5e-4 \
@@ -95,9 +130,8 @@ python 03_methods/train_nle.py \
   --normalize-x
 ```
 
-Expected outputs:
-
-```text
+**Expected outputs:**
+```
 03_methods/artifacts/nle_checkpoint/
 03_methods/artifacts/nle_metrics.json
 03_methods/artifacts/nle_normalization.npz
@@ -105,56 +139,43 @@ Expected outputs:
 
 ---
 
-## 🧠 STEP 6: Run NPE Training (Colab GPU)
+## 📊 Step 4: Evaluate and Compare NPE vs NLE
 
-Train the Neural Posterior Estimation (NPE) model using the generated dataset. For significantly faster training times, this step is optimized for execution on a Google Colab T4 GPU.
+```bash
+python 04_evaluation/metrics.py
+```
 
-In a new Colab notebook, copy and paste this single cell to mount your drive and execute the training pipeline:
-
-```python
-# 1. Mount Google Drive to access your uploaded repository
-from google.colab import drive
-drive.mount('/content/drive')
-
-# 2. Execute the training script
-!python /content/drive/MyDrive/epidemic-sbi-project/03_methods/train_npe.py \
-  --data /content/drive/MyDrive/epidemic-sbi-project/02_data/sir_dataset.npz
-
-Optional overrides (for hyperparameter tuning):
-
-!python /content/drive/MyDrive/epidemic-sbi-project/03_methods/train_npe.py \
-  --data /content/drive/MyDrive/epidemic-sbi-project/02_data/sir_dataset.npz \
-  --artifacts-dir /content/drive/MyDrive/epidemic-sbi-project/03_methods/artifacts \
-  --epochs 150 \
-  --batch-size 256 \
-  --lr 5e-4 \
-  --hidden-dim 50 \
-  --density-estimator maf
-
-Expected outputs:
-
-03_methods/artifacts/npe_posterior.pkl
-03_methods/artifacts/npe_metrics.json
+This script compares NPE and NLE using:
+- **MAE** (Mean Absolute Error) on β and γ
+- **Coverage** of 90% credible intervals
+- **Posterior recovery plots**
+- **SBC** (Simulation-Based Calibration)
 
 ---
 
-## 📋 Assignments & Extension Goals
+## 🔬 SIR Model
 
-The core goal is to move beyond basic NPE and perform a **Method Comparison**.
+The SIR model divides the population into three compartments:
 
-| Phase | Assigned To | Key Tasks |
-| --- | --- | --- |
-| **Data Gen** | **Teammate 2** | 10k samples; , . |
-| **Training** | **Shared** | Compare **NPE** (Invertible Networks) vs. **NRE** (Ratio Estimation). |
-| **Evaluation** | **Teammate 3** | MAE, Coverage, and **SBC** (Simulation-Based Calibration). |
+```
+dS/dt = -β · S · I / N
+dI/dt =  β · S · I / N - γ · I
+dR/dt =  γ · I
+```
+
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| β (beta) | [0.10, 0.60] | Infection rate |
+| γ (gamma) | [0.01, 0.10] | Recovery rate |
+| R₀ = β/γ | [1.0, 60.0] | Basic reproduction number |
+| N | 10,000 | Total population |
+| T | 160 days | Simulation length |
 
 ---
 
-## ⚖️ Important Rules
+## ⚖️ Rules
 
-1. **PULL FIRST:** `git pull` every time you sit down to code.
-2. **ISOLATION:** Only edit your assigned folder.
-3. **DAILY PUSH:** Don't wait until the deadline. Commit daily.
-4. **CONSULT:** Ask in the group chat before changing `sir_model.py` or `requirements.txt`.
-
----
+1. **PULL FIRST:** `git pull` every time you sit down to code
+2. **ISOLATION:** Only edit your assigned folder
+3. **DAILY PUSH:** Commit and push daily
+4. **CONSULT:** Ask in the group chat before changing `sir_model.py` or `requirements.txt`
