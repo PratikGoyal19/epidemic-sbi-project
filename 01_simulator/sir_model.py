@@ -26,77 +26,48 @@ class SIRSimulator:
         dR/dt = gamma * I
     
     Where:
-        beta = infection rate (how fast disease spreads)
+        beta  = infection rate (how fast disease spreads)
         gamma = recovery rate (how fast people recover)
-        R0 = beta/gamma = basic reproduction number
+        I0    = initial number of infected individuals (now inferred)
+        R0    = beta/gamma = basic reproduction number
     """
     
-    def __init__(self, N=10000, I0=10, R0=0, T=160):
+    def __init__(self, N=10000, T=160):
         """
-        Initialize the SIR simulator
+        Initialize the SIR simulator.
+        Note: I0 is no longer fixed here — it is passed to simulate() as a parameter.
         
         Parameters:
         -----------
         N : int
             Total population size (default: 10,000)
-        I0 : int
-            Initial number of infected individuals (default: 10)
-        R0 : int
-            Initial number of recovered individuals (default: 0)
         T : int
             Number of days to simulate (default: 160)
         """
         self.N = N
-        self.I0 = I0
-        self.S0 = N - I0 - R0
-        self.R0_init = R0
         self.T = T
         
     def _deriv(self, y, t, N, beta, gamma):
-        """
-        SIR differential equations
-        
-        Parameters:
-        -----------
-        y : tuple
-            Current state (S, I, R)
-        t : float
-            Current time
-        N : int
-            Total population
-        beta : float
-            Infection rate
-        gamma : float
-            Recovery rate
-            
-        Returns:
-        --------
-        tuple
-            Derivatives (dS/dt, dI/dt, dR/dt)
-        """
+        """SIR differential equations."""
         S, I, R = y
         dSdt = -beta * S * I / N
-        dIdt = beta * S * I / N - gamma * I
-        dRdt = gamma * I
+        dIdt =  beta * S * I / N - gamma * I
+        dRdt =  gamma * I
         return dSdt, dIdt, dRdt
     
-    def simulate(self, beta, gamma, noise_level=0.1, seed=None):
+    def simulate(self, beta, gamma, I0=10, noise_level=0.1, seed=None):
         """
-        Run one SIR simulation with given parameters
-        
-        This function:
-        1. Solves the ODE system to get true infected counts
-        2. Adds realistic observation noise (Poisson)
-        3. Returns noisy observed data (what we'd see in reality)
+        Run one SIR simulation with given parameters.
         
         Parameters:
         -----------
         beta : float
-            Infection rate (typical range: 0.0001 to 0.001)
-            Higher beta = faster spread
+            Infection rate (range: 0.10 to 0.60)
         gamma : float
-            Recovery rate (typical range: 0.01 to 0.1)
-            Higher gamma = faster recovery
+            Recovery rate (range: 0.01 to 0.10)
+        I0 : float
+            Initial number of infected individuals (range: 1 to 50)
+            Now an inferred parameter instead of a fixed constant.
         noise_level : float
             Observation noise level (default: 0.1)
         seed : int, optional
@@ -110,8 +81,9 @@ class SIRSimulator:
         if seed is not None:
             np.random.seed(seed)
         
-        # Initial conditions
-        y0 = self.S0, self.I0, self.R0_init
+        # Initial conditions — I0 is now a parameter
+        S0 = self.N - I0
+        y0 = (S0, I0, 0.0)
         
         # Time points (one per day)
         t = np.linspace(0, self.T, self.T)
@@ -119,49 +91,27 @@ class SIRSimulator:
         # Solve the ODE system
         solution = odeint(self._deriv, y0, t, args=(self.N, beta, gamma))
         
-        # Extract infected counts (column 1 of solution)
+        # Extract infected counts
         I_true = solution[:, 1]
         
-        # Add realistic observation noise (Poisson distribution for count data)
-        # This simulates real-world measurement uncertainty
+        # Add Poisson observation noise
         I_observed = np.random.poisson(np.maximum(1, I_true))
-        
-        # Ensure no negative values
         I_observed = np.maximum(0, I_observed).astype(float)
         
         return I_observed
     
-    def plot_simulation(self, beta, gamma, save_path=None):
-        """
-        Visualize one epidemic simulation
+    def plot_simulation(self, beta, gamma, I0=10, save_path=None):
+        """Visualize one epidemic simulation."""
+        I_observed = self.simulate(beta, gamma, I0=I0)
+        R0_val = beta / gamma
         
-        Parameters:
-        -----------
-        beta : float
-            Infection rate
-        gamma : float
-            Recovery rate
-        save_path : str, optional
-            If provided, save figure to this path
-            
-        Returns:
-        --------
-        I_observed : numpy array
-            The simulated infected counts
-        """
-        # Run simulation
-        I_observed = self.simulate(beta, gamma)
-        
-        # Calculate R0 (basic reproduction number)
-        R0 = beta / gamma
-        
-        # Create visualization
         plt.figure(figsize=(10, 6))
         plt.plot(I_observed, linewidth=2, color='darkred', label='Infected')
         plt.xlabel('Days', fontsize=12)
         plt.ylabel('Number of Infected Individuals', fontsize=12)
-        plt.title(f'SIR Epidemic Simulation\nβ={beta:.5f}, γ={gamma:.3f}, R₀={R0:.2f}', 
-                 fontsize=14, fontweight='bold')
+        plt.title(f'SIR Epidemic Simulation\n'
+                  f'β={beta:.3f}, γ={gamma:.3f}, I₀={I0:.0f}, R₀={R0_val:.2f}',
+                  fontsize=14, fontweight='bold')
         plt.grid(True, alpha=0.3)
         plt.legend()
         plt.tight_layout()
@@ -171,100 +121,51 @@ class SIRSimulator:
             print(f"✅ Figure saved to {save_path}")
         
         plt.show()
-        
         return I_observed
 
 
 # ============================================================================
-# TESTING CODE - Run this file directly to test the simulator
+# TESTING CODE
 # ============================================================================
 
 if __name__ == "__main__":
     print("="*70)
-    print("TESTING SIR SIMULATOR")
+    print("TESTING SIR SIMULATOR (with I0 as inferred parameter)")
     print("="*70)
     
-    # Create simulator instance
-    sim = SIRSimulator(N=10000, I0=10, T=160)
+    sim = SIRSimulator(N=10000, T=160)
     print("✅ Simulator created successfully")
     print(f"   Population: {sim.N:,}")
-    print(f"   Initial infected: {sim.I0}")
     print(f"   Simulation days: {sim.T}")
+    print(f"   I0: now an inferred parameter (range: 1-50)")
     
-    # Test 1: Basic simulation with CORRECT parameters
+    # Test 1: Basic simulation
     print("\n" + "-"*70)
-    print("TEST 1: Basic Simulation")
+    print("TEST 1: Basic Simulation with I0=10")
     print("-"*70)
-    beta_test = 0.3  # Changed from 0.0003 to 0.3
-    gamma_test = 0.05
-    I = sim.simulate(beta=beta_test, gamma=gamma_test, seed=42)
-    R0_test = beta_test / gamma_test
-    print(f"✅ Simulation complete")
-    print(f"   Parameters: β={beta_test:.5f}, γ={gamma_test:.3f}")
-    print(f"   R₀: {R0_test:.2f}")
-    print(f"   Peak infected: {I.max():.0f} people")
-    print(f"   Final infected: {I[-1]:.0f} people")
-    
-    # Test 2: Data quality checks
+    I = sim.simulate(beta=0.3, gamma=0.05, I0=10, seed=42)
+    print(f"✅ beta=0.3, gamma=0.05, I0=10 → Peak={I.max():.0f}")
+
+    # Test 2: Different I0 values
     print("\n" + "-"*70)
-    print("TEST 2: Data Quality Checks")
+    print("TEST 2: Effect of I0 on epidemic")
     print("-"*70)
-    assert np.all(I >= 0), "ERROR: Found negative values!"
-    assert not np.any(np.isnan(I)), "ERROR: Found NaN values!"
+    for i0 in [1, 10, 25, 50]:
+        I = sim.simulate(beta=0.3, gamma=0.05, I0=i0, seed=42)
+        print(f"✅ I0={i0:2d} → Peak={I.max():.0f}, Final={I[-1]:.0f}")
+
+    # Test 3: Data quality
+    print("\n" + "-"*70)
+    print("TEST 3: Data Quality Checks")
+    print("-"*70)
+    I = sim.simulate(beta=0.3, gamma=0.05, I0=10, seed=42)
+    assert np.all(I >= 0), "ERROR: Negative values!"
+    assert not np.any(np.isnan(I)), "ERROR: NaN values!"
     assert len(I) == 160, "ERROR: Wrong length!"
     print("✅ No negative values")
     print("✅ No NaN values")
     print("✅ Correct length (160 days)")
-    
-    # Test 3: R₀ effect on epidemic size with CORRECT parameters
-    print("\n" + "-"*70)
-    print("TEST 3: R₀ Effect on Epidemic Size")
-    print("-"*70)
-    
-    # Use realistic parameter combinations
-    beta_low, gamma_low = 0.15, 0.05      # R₀ = 3
-    beta_med, gamma_med = 0.3, 0.05       # R₀ = 6
-    beta_high, gamma_high = 0.6, 0.05     # R₀ = 12
-    
-    I_low = sim.simulate(beta=beta_low, gamma=gamma_low, seed=123)
-    I_med = sim.simulate(beta=beta_med, gamma=gamma_med, seed=124)
-    I_high = sim.simulate(beta=beta_high, gamma=gamma_high, seed=125)
-    
-    R0_low = beta_low / gamma_low
-    R0_med = beta_med / gamma_med
-    R0_high = beta_high / gamma_high
-    
-    print(f"✅ Low R₀ ({R0_low:.1f}):  β={beta_low:.2f}, Peak = {I_low.max():.0f} infected")
-    print(f"✅ Med R₀ ({R0_med:.1f}):  β={beta_med:.2f}, Peak = {I_med.max():.0f} infected")
-    print(f"✅ High R₀ ({R0_high:.1f}): β={beta_high:.2f}, Peak = {I_high.max():.0f} infected")
-    
-    # Verify trend
-    if I_high.max() > I_med.max() > I_low.max():
-        print("✅ Higher R₀ produces larger epidemics (correct!)")
-    else:
-        print("⚠️  Note: Due to stochastic noise, trend may vary slightly")
-    
-    # Test 4: Reproducibility
-    print("\n" + "-"*70)
-    print("TEST 4: Reproducibility with Random Seed")
-    print("-"*70)
-    I1 = sim.simulate(beta=0.3, gamma=0.05, seed=42)
-    I2 = sim.simulate(beta=0.3, gamma=0.05, seed=42)
-    assert np.allclose(I1, I2), "ERROR: Same seed gives different results!"
-    print("✅ Same seed produces identical results")
-    
-    # Test 5: Create visualization
-    print("\n" + "-"*70)
-    print("TEST 5: Creating Visualization")
-    print("-"*70)
-    sim.plot_simulation(beta=0.3, gamma=0.05, 
-                       save_path='test_epidemic.png')
-    print("✅ Plot created and saved")
-    
-    # Summary
+
     print("\n" + "="*70)
     print("🎉 ALL TESTS PASSED!")
     print("="*70)
-    print("✅ Simulator is working correctly!")
-    print("✅ Ready for data generation!")
-    print("="*70 + "\n")

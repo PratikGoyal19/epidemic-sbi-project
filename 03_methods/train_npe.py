@@ -1,5 +1,6 @@
 """
 Train a Neural Posterior Estimation (NPE) model for SIR data using BayesFlow.
+Parameters inferred: beta, gamma, I0
 """
 
 import argparse
@@ -45,15 +46,15 @@ def main() -> None:
 
     print("=" * 70)
     print("Training NPE with BayesFlow 1.1.6")
+    print("Parameters: beta, gamma, I0")
     print("=" * 70)
     print("Loading dataset...")
     theta, x = load_dataset(data_path)
     print(f"  Loaded {len(theta):,} samples")
-    print(f"  Theta shape: {theta.shape}")
+    print(f"  Theta shape: {theta.shape}  [beta, gamma, I0]")
     print(f"  X shape: {x.shape}")
 
     # BayesFlow expects 3D input for sequence: (batch, time_steps, features)
-    # Reshape x from (N, 160) to (N, 160, 1)
     x_3d = x[:, :, np.newaxis]
     print(f"  X reshaped to: {x_3d.shape}")
 
@@ -67,20 +68,19 @@ def main() -> None:
     print(f"  Hidden units: {args.hidden_dim}")
     print(f"  Summary dim: {args.summary_dim}")
 
-    # SequenceNetwork is correct for time series (1D temporal data)
     summary_net = bf.networks.SequenceNetwork(
         summary_dim=args.summary_dim
     )
     print("  Summary network (SequenceNetwork) created")
 
     inference_net = bf.networks.InvertibleNetwork(
-        num_params=2,
+        num_params=3,  # beta, gamma, I0
         num_coupling_layers=args.num_coupling_layers,
         coupling_settings={
             "dense_args": {"units": args.hidden_dim, "activation": "relu"}
         }
     )
-    print("  Inference network created")
+    print("  Inference network created (3 parameters: beta, gamma, I0)")
 
     amortizer = bf.amortizers.AmortizedPosterior(inference_net, summary_net)
     print("  Amortizer created")
@@ -108,7 +108,6 @@ def main() -> None:
     print("=" * 70)
     print(f"Runtime: {runtime_sec:.2f}s ({runtime_sec/60:.1f} minutes)")
 
-    # Save metrics
     metrics = {
         "n_samples": int(theta.shape[0]),
         "epochs": args.epochs,
@@ -117,6 +116,8 @@ def main() -> None:
         "hidden_dim": args.hidden_dim,
         "summary_dim": args.summary_dim,
         "runtime_sec": float(runtime_sec),
+        "num_params": 3,
+        "param_names": ["beta", "gamma", "I0"],
     }
     metrics_path = out_dir / "npe_metrics.json"
     with open(metrics_path, "w") as f:

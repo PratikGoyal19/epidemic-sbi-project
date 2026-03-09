@@ -32,8 +32,8 @@ import tensorflow as tf
 ARTIFACTS_DIR = Path("03_methods/artifacts")
 DATA_PATH     = Path("02_data/sir_dataset.npz")
 OUT_DIR       = Path("04_evaluation/results")
-N_TEST        = 50        # number of test samples
-N_POSTERIOR   = 200       # posterior samples per observation
+N_TEST        = 200       # number of test samples
+N_POSTERIOR   = 500       # posterior samples per observation
 CREDIBLE_LEVELS = [0.5, 0.9]  # credible interval levels for coverage
 SEED          = 42
 
@@ -182,7 +182,7 @@ def get_nle_posterior_samples(
 
         all_samples[i] = np.concatenate(collected, axis=0)[:n_samples]
 
-        if (i + 1) % 50 == 0:
+        if (i + 1) % 25 == 0:
             print(f"    NLE posterior sampling: {i+1}/{n_test}")
 
     return all_samples

@@ -3,7 +3,7 @@ Train a Neural Likelihood Estimation (NLE) model for SIR data using BayesFlow.
 
 Model:
 - Learns p(x | theta), where:
-  - theta = [beta, gamma] (shape: 2)
+  - theta = [beta, gamma, I0] (shape: 3)
   - x = infected trajectory over time (shape: T)
 - Uses BayesFlow's amortized likelihood with a conditional invertible network.
 
@@ -54,8 +54,8 @@ def load_dataset(path: Path) -> tuple[np.ndarray, np.ndarray]:
         raise KeyError("Dataset must contain 'theta' and 'x' arrays.")
     theta = data["theta"]
     x = data["x"]
-    if theta.ndim != 2 or theta.shape[1] != 2:
-        raise ValueError(f"Expected theta shape (N, 2), got {theta.shape}")
+    if theta.ndim != 2 or theta.shape[1] != 3:  # updated: 3 params (beta, gamma, I0)
+        raise ValueError(f"Expected theta shape (N, 3), got {theta.shape}")
     if x.ndim != 2:
         raise ValueError(f"Expected x shape (N, T), got {x.shape}")
     if x.shape[0] != theta.shape[0]:
@@ -159,11 +159,12 @@ def main() -> None:
 
     print("=" * 70)
     print("Training NLE with BayesFlow 1.1.6")
+    print("Parameters: beta, gamma, I0")
     print("=" * 70)
     print("Loading dataset...")
     theta, x = load_dataset(data_path)
     print(f" Loaded {len(theta):,} samples")
-    print(f"   Theta shape: {theta.shape}")
+    print(f"   Theta shape: {theta.shape}  [beta, gamma, I0]")
     print(f"   X shape: {x.shape}")
 
     idx = np.arange(theta.shape[0])
@@ -261,6 +262,8 @@ def main() -> None:
         "dataset_path": str(data_path),
         "n_samples": int(theta.shape[0]),
         "trajectory_length_T": int(x.shape[1]),
+        "num_params": 3,
+        "param_names": ["beta", "gamma", "I0"],
         "seed": args.seed,
         "epochs": args.epochs,
         "batch_size": args.batch_size,
