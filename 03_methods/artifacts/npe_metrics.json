@@ -5,5 +5,11 @@
   "num_coupling_layers": 4,
   "hidden_dim": 128,
   "summary_dim": 32,
-  "runtime_sec": 1346.0918517112732
+  "runtime_sec": 876.8401281833649,
+  "num_params": 3,
+  "param_names": [
+    "beta",
+    "gamma",
+    "I0"
+  ]
 }

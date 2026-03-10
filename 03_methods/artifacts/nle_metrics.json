@@ -2,6 +2,12 @@
   "dataset_path": "02_data\\sir_dataset.npz",
   "n_samples": 10000,
   "trajectory_length_T": 160,
+  "num_params": 3,
+  "param_names": [
+    "beta",
+    "gamma",
+    "I0"
+  ],
   "seed": 42,
   "epochs": 150,
   "batch_size": 256,
@@ -18,6 +24,6 @@
   "final_val_loss": NaN,
   "train_metric_key": null,
   "val_metric_key": null,
-  "runtime_sec": 238.97877144813538,
+  "runtime_sec": 201.00036787986755,
   "history": {}
 }
