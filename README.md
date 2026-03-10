@@ -1,6 +1,6 @@
 # Epidemic SBI Project
 
-This repository implements a Simulation-Based Inference (SBI) framework to estimate parameters (β, γ) for the SIR epidemic model. This project extends Homework 4 by comparing Neural Posterior Estimation (NPE) against Neural Likelihood Estimation (NLE) using BayesFlow.
+This repository implements a Simulation-Based Inference (SBI) framework to estimate parameters (β, γ, I₀) for the SIR epidemic model. This project extends Homework 4 by comparing Neural Posterior Estimation (NPE) against Neural Likelihood Estimation (NLE) using BayesFlow.
 
 ---
 
@@ -52,9 +52,9 @@ epidemic-sbi-project/
 |-------|-------------|--------|
 | Simulator | Pratik Goyal | ✅ Done |
 | Data Generation | Suryansh Chaturvedi | ✅ Done |
-| NPE Training | Pratik Goyal | ✅ Done |
-| NLE Training | Pratik Goyal | ✅ Done |
-| Evaluation (NPE vs NLE) | Mayank Choudhary | ✅ Done |
+| NPE Training | Mayank Choudhary | ✅ Done |
+| NLE Training | Suryansh Chaturvedi | ✅ Done |
+| Evaluation (NPE vs NLE) | Pratik Goyal | ✅ Done |
 | Real Data Inference (Italy COVID-19) | Pratik Goyal | ✅ Done |
 
 ---
@@ -91,7 +91,7 @@ python 02_data/generate_data.py --n-samples 10000 --out 02_data/sir_dataset.npz
 **Expected output:**
 ```
 02_data/sir_dataset.npz   (~3 MB)
-theta shape: (10000, 2)   [beta, gamma]
+theta shape: (10000, 3)   [beta, gamma, I0]
 x shape:     (10000, 160) [infected counts over 160 days]
 ```
 
@@ -123,6 +123,7 @@ python 03_methods/train_npe.py \
 ```
 03_methods/artifacts/npe_checkpoint/
 03_methods/artifacts/npe_metrics.json
+Runtime: ~15 minutes
 ```
 
 ---
@@ -141,8 +142,7 @@ python 03_methods/train_nle.py \
   --batch-size 256 \
   --lr 5e-4 \
   --hidden-dim 128 \
-  --num-coupling-layers 4 \
-  --normalize-x
+  --num-coupling-layers 4
 ```
 
 **Expected outputs:**
@@ -150,6 +150,7 @@ python 03_methods/train_nle.py \
 03_methods/artifacts/nle_checkpoint/
 03_methods/artifacts/nle_metrics.json
 03_methods/artifacts/nle_normalization.npz
+Runtime: ~4 minutes
 ```
 
 ---
@@ -160,17 +161,22 @@ python 03_methods/train_nle.py \
 python 04_evaluation/metrics.py
 ```
 
-This script compares NPE and NLE on 50 held-out test samples using:
-- **MAE** (Mean Absolute Error) on β and γ
-- **RMSE** on β and γ
+Compares NPE and NLE on 200 held-out test samples (500 posterior samples each) using:
+- **MAE** and **RMSE** on β, γ, and I₀
 - **Coverage** of 50% and 90% credible intervals
 - **Posterior recovery plots**
-- **SBC** (Simulation-Based Calibration)
+- **SBC** (Simulation-Based Calibration) rank histograms
 
-**Key results:**
+**Key results (200 test samples, 500 posterior samples):**
 ```
-NPE MAE:  0.0033   vs   NLE MAE:  0.0364   (NPE is 11x more accurate)
-NPE 90% Coverage: 96-98%   vs   NLE: 86-96%
+Metric                NPE        NLE
+─────────────────────────────────────
+MAE beta            0.0068     0.0672   (NPE 10x better)
+MAE gamma           0.0013     0.0229   (NPE 18x better)
+MAE I0              1.8620     2.2245   (NPE better)
+90% Coverage beta    99.0%     94.5%
+90% Coverage gamma   95.0%     86.0%
+90% Coverage I0      96.0%     85.5%
 ```
 
 **Outputs saved to** `04_evaluation/results/`
@@ -183,15 +189,23 @@ NPE 90% Coverage: 96-98%   vs   NLE: 86-96%
 python 04_evaluation/real_data.py
 ```
 
-Applies both trained models to Italy's COVID-19 first wave (Feb 23 – Jul 31, 2020) using the Our World in Data dataset.
+Applies both trained models to Italy's COVID-19 first wave (Feb 23 – Jul 31, 2020) using the Our World in Data dataset (not included in repo — download separately).
 
 **Key results:**
 ```
-NPE: β=0.544, γ=0.103, R₀=5.28  [90% CI: 4.96, 5.60]  — tight, confident estimate
-NLE: β=0.114, γ=0.048, R₀=3.48  [90% CI: 1.16, 8.61]  — wide, uncertain estimate
+Parameter   NPE Mean   NPE 90% CI         NLE Mean   NLE 90% CI
+────────────────────────────────────────────────────────────────
+beta         0.2718    [0.24, 0.30]        0.1403    [0.11, 0.20]
+gamma        0.1713    [0.15, 0.19]        0.0560    [0.03, 0.10]
+I0           2.875     [~0, 5.90]          1.130     [1.03, 1.36]
+R0           1.59      [1.48, 1.72]        3.36      [1.14, 5.25]
 ```
 
+NPE gives tight, confident estimates. NLE gives wider, more uncertain posteriors.
+
 **Outputs saved to** `04_evaluation/results/real_data/`
+
+> **Note:** The OWID COVID dataset (`owid-covid-data.csv`) is excluded from the repo due to its size (93 MB). Download it from [Our World in Data](https://ourworldindata.org/covid-cases) and place it in `02_data/`.
 
 ---
 
@@ -205,12 +219,15 @@ dI/dt =  β · S · I / N - γ · I
 dR/dt =  γ · I
 ```
 
+All three parameters are inferred jointly:
+
 | Parameter | Range | Description |
 |-----------|-------|-------------|
 | β (beta) | [0.10, 0.60] | Infection rate |
 | γ (gamma) | [0.01, 0.10] | Recovery rate |
+| I₀ | [1, 50] | Initial infected individuals |
 | R₀ = β/γ | [1.0, 60.0] | Basic reproduction number |
-| N | 10,000 | Total population |
+| N | 10,000 | Total population (fixed) |
 | T | 160 days | Simulation length |
 
 ---
